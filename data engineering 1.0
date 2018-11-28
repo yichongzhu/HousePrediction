@@ -1,0 +1,54 @@
+#transform dummy back to numeric
+df.numeric$poolQc <- (df.numeric$PoolQC_Ex)*3+(df.numeric$PoolQC_Gd)*2+(df.numeric$PoolQC_Fa)*1+(df.numeric$PoolQC_None)*0
+table(df.numeric$poolQc)
+df.numeric$PoolQC_None <- NULL
+df.numeric$PoolQC_Ex <- NULL
+df.numeric$PoolQC_Gd <- NULL
+df.numeric$PoolQC_Fa <- NULL
+
+df.numeric$BsmtCond <- (df.numeric$BsmtCond_Gd)*4+(df.numeric$BsmtCond_TA)*3+(df.numeric$BsmtCond_Fa)*2+(df.numeric$BsmtCond_Po)*1+(df.numeric$BsmtCond_None)*0
+df.numeric$BsmtCond_Gd <- NULL
+df.numeric$BsmtCond_TA <- NULL
+df.numeric$BsmtCond_Fa <- NULL
+df.numeric$BsmtCond_Po <- NULL
+df.numeric$BsmtCond_None <- NULL
+
+#combine all bathroom 
+df.numeric$TotBathrooms <- df.numeric$FullBath + (df.numeric$HalfBath)*0.5 + df.numeric$BsmtFullBath + (df.numeric$BsmtHalfBath)*0.5
+df.numeric$FullBath <- NULL
+df.numeric$HalfBath <- NULL
+df.numeric$BsmtFullBath <- NULL
+df.numeric$BsmtHalfBath <- NULL
+
+#make houseage variable
+df.numeric$houseage <- (df.numeric$YrSold) - (df.numeric$YearRemodAdd)
+df.numeric$houseage[which(df.numeric$houseage<0)]=0
+df.numeric$YrSold<-NULL
+df.numeric$YearRemodAdd<-NULL
+df.numeric$YearBuilt<-NULL
+
+#garageage
+df.numeric$garageage <- 2011 - df.numeric$GarageYrBlt
+df.numeric$GarageYrBlt <- NULL
+
+#total square feet 
+df.numeric$totalsqft <- df.numeric$GrLivArea+df.numeric$TotalBsmtSF
+df.numeric$GrLivArea <- NULL
+df.numeric$TotalBsmtSF <- NULL
+
+#porch variables combined
+df.numeric$totalporchsf <- df.numeric$OpenPorchSF+df.numeric$EnclosedPorch+df.numeric$X3SsnPorch+df.numeric$ScreenPorch
+df.numeric$OpenPorchSF<-NULL
+df.numeric$X3SsnPorch <-NULL
+df.numeric$ScreenPorch<-NULL
+df.numeric$EnclosedPorch<-NULL
+
+
+#importance visualization quick random forest
+set.seed(1)
+quick_RF <- randomForest(x=df.numeric[1:1460,], y=train$salePrice, ntree=100,importance=TRUE)
+imp_RF <- importance(quick_RF)
+imp_DF <- data.frame(Variables = row.names(imp_RF), MSE = imp_RF[,1])
+imp_DF <- imp_DF[order(imp_DF$MSE, decreasing = TRUE),]
+
+ggplot(imp_DF[1:20,], aes(x=reorder(Variables, MSE), y=MSE, fill=MSE)) + geom_bar(stat = 'identity') + labs(x = 'Variables', y= '% increase MSE if variable is randomly permuted') + coord_flip() + theme(legend.position="none")
