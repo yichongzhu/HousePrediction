@@ -1,0 +1,47 @@
+#XGBoost model
+install.packages("xgboost")
+library(xgboost)
+str(train)
+
+xgb_grid = expand.grid(
+  nrounds = 100,
+  eta = c(0.1, 0.05, 0.01),
+  max_depth = c(2, 3, 4, 5, 6),
+  gamma = 0,
+  colsample_bytree=1,
+  min_child_weight=c(1, 2, 3, 4 ,5),
+  subsample=1
+)
+
+xgb_caret <- train(X_train,Y_train, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
+xgb_caret$bestTune
+#nrounds max_depth  eta gamma colsample_bytree min_child_weight subsample
+#100             4 0.1     0                1                3         1
+
+dtrain <- xgb.DMatrix(data=as.matrix(X_train),label=Y_train)
+dtest <- xgb.DMatrix(data = as.matrix(X_test))
+
+param_xgb <- list (
+  objective = "reg:linear",
+  booster = "gbtree",
+  eta = 0.1,
+  gamma = 0,
+  max_depth = 4,
+  min_child_weight=3,
+  subsample=1,
+  colsample_bytree=1
+)
+
+xgbcv <- xgb.cv( params = param_xgb, data = dtrain, nrounds = 1000, nfold = 5, showsd = T, stratified = T, print_every_n = 20, early_stopping_rounds = 10, maximize = F)
+#197 best rounds
+xgb_mod <- xgb.train(data=dtrain,params = param_xgb,nrounds=197)
+xgb_pred <- predict(xgb_mod,dtest)
+
+library(plyr)
+write.csv(xgb_pred,file="xgbpred.csv")
+#view variable importance plot
+install.packages("Ckmeans.1d.dp")
+library(Ckmeans.1d.dp) #required for ggplot clustering
+mat <- xgb.importance (feature_names = colnames(X_train),model = xgb_mod)
+xgb.ggplot.importance(importance_matrix = mat[1:20], rel_to_first = TRUE)
+
